@@ -25,20 +25,23 @@ export interface ICart {
   clear(): void; //очищает корзину 
 }
 
+//Базовый интерфейс для форм
+export interface IForm {
+  submit(): void; //отправить форму
+  validateForm(): void; //валидация форм
+  clear(): void; //очищает формы
+}
+
 //Интерфейс для деталей заказа
-export interface IOrder {
+export interface IOrder extends IForm {
 	payment: 'Онлайн' | 'При получении'; //способ оплаты
 	address: string; //адрес
-  validateForm(): void; //валидация форм
-  clear(): void; //очищает формы 
 }
 
 //Интерфейс для персональных данных
 export interface IPersonalData {
 	email: string; //электронная почта
 	phone: string; //телефон
-  validateForm(): void; //валидация форм
-  clear(): void; //очищает формы 
 }
 
 //Интерфейс для слушателя событий
