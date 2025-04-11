@@ -1,4 +1,3 @@
-import { api } from '../..';
 import { ICatalog, IProduct } from '../../types';
 
 export class CatalogModel implements ICatalog {

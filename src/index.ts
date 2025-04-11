@@ -9,12 +9,11 @@ import { CatalogModel } from './components/Catalog/CatalogModel';
 import { CatalogView } from './components/Catalog/CatalogView';
 import { Modal } from './components/base/Modal';
 import './scss/styles.scss';
-import { IProduct, Order } from './types';
+import { IProduct, Order, OrderResponse } from './types';
 import { OrderModel } from './components/Order/OrderModel';
 import { OrderView } from './components/Order/OrderView';
 import { ContactsView } from './components/Order/ContactsView';
 import { OrderSuccessView } from './components/Order/OrderSuccessView';
-
 
 const events = new EventEmitter();
 const cardBasketTemplate = document.getElementById(
@@ -39,24 +38,29 @@ const orderModel = new OrderModel(events, basketModel);
 const orderTemplate = document.getElementById('order') as HTMLTemplateElement;
 const orderView = new OrderView(orderTemplate, events, orderModel);
 
-const contactsTemplate = document.getElementById('contacts') as HTMLTemplateElement;
-const contactsView = new ContactsView(contactsTemplate, events, orderModel)
+const contactsTemplate = document.getElementById(
+	'contacts'
+) as HTMLTemplateElement;
+const contactsView = new ContactsView(contactsTemplate, events, orderModel);
 
-const sucessTemplate = document.getElementById('success') as HTMLTemplateElement;
+const sucessTemplate = document.getElementById(
+	'success'
+) as HTMLTemplateElement;
 const sucessView = new OrderSuccessView(sucessTemplate, events, orderModel);
 
 export const api = new Api('https://larek-api.nomoreparties.co/api/weblarek');
 
-api
-	.get('/product/')
-	.then((response: { items: any[] }) => {
-		const items = response.items;
-		catalogModel.setItems(items as IProduct[]);
-		events.emit('catalog:loaded');
-	})
-	.catch((err) => console.log(err));
-
-//console.log(catalogModel.getItems());
+function getProducts() {
+	api
+		.get('/product/')
+		.then((response: { items: IProduct[] }) => {
+			const items = response.items;
+			catalogModel.setItems(items as IProduct[]);
+			events.emit('catalog:loaded');
+		})
+		.catch((err) => console.log(err));
+}
+getProducts();
 
 function renderCatalog(items: IProduct[]) {
 	catalogView.render({
@@ -101,18 +105,18 @@ events.on('basket:change', (event: { items: IProduct[] }) => {
 });
 
 events.on('basket:buy', () => {
-	modal.open(orderView.render())
-})
+	modal.open(orderView.render());
+});
 
 events.on('order:contacts', () => {
-	modal.open(contactsView.render())
-})
+	modal.open(contactsView.render());
+});
 
-events.on('order:success', (response: any) => {
+events.on('order:success', (response: OrderResponse) => {
 	orderModel.clear();
 	basketModel.clear();
-	modal.open(sucessView.render(response))
-})
+	modal.open(sucessView.render(response));
+});
 
 events.on('order:change', () => {
 	orderView.render();
@@ -120,26 +124,31 @@ events.on('order:change', () => {
 });
 
 events.on('ui:basket-add', (event: { item: IProduct }) => {
-	//console.log(`Корзина изменена, добавлен продукт ${event.item.id}`);
 	basketModel.add(event.item);
 });
 
 events.on('ui:basket-remove', (event: { item: IProduct }) => {
-	//console.log(`Корзина изменена, удалён продукт ${event.item.id}`);
 	basketModel.remove(event.item);
 });
 
-events.on('order:submit', (event: {order: Order}) => {
-	api
-	.post('/order', event.order)
-	.then((response: { data: any }) => {
-		events.emit('order:success', { response });
-		console.log(response)
-	})
-	.catch((err) => console.log(err));
+events.on('order:submit', (event: { order: Order }) => {
+	(api.post('/order', event.order) as Promise<OrderResponse>)
+		.then((response) => {
+			if ('error' in response) {
+				console.error('Ошибка:', response.error);
+			} else {
+				events.emit('order:success', response);
+				console.log('Успешный заказ:', response.id, response.total);
+			}
+		})
+		.catch((err) => console.log(err));
 });
 
 events.on('order:close', () => {
-	modal.close()
-})
+	modal.close();
+});
 
+events.on('order:reset', () => {
+	orderView.resetForm();
+	contactsView.resetForm();
+});
